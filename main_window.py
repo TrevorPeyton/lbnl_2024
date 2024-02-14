@@ -5,6 +5,7 @@ import time
 import pathlib
 import numpy as np
 import threading
+import scipy as sp
 
 
 class MainWindow:
@@ -197,8 +198,20 @@ class MainWindow:
         self.main_window["-self.run_log-"].update(self.run_log.values.tolist())
         self.save_log()
 
-    def compute_shift_transient(self):
-        pass
+    def compute_shift_transient(self, run):
+        # read file into numpy array
+        with open(f"data/runs/{run}/shift.txt", "r") as f:
+            data = np.stack([np.fromiter(line.strip(), dtype=np.int64) for line in f])
+        data[data == 0] = -1
+        kernel = np.array(self.current_config["SHIFT"]["shift_vals"])
+        kernel[kernel == 0] = -1
+        kernel = kernel.reshape(-1, 1)
+        result = sp.signal.convolve2d(data, kernel, mode="valid")
+        transients = sum(
+            np.repeat([SHIFT_REGISTER_SIZE], 6) - np.sum(result != 0, axis=0)
+        )
+        self.run_log.loc[self.run_log["run"] == run, "transients"] = transients
+        self.update_log()
 
     def compute_tdc_transient(self, run):
         # count number of files in data/runs/{run} excluding log.txt
@@ -303,7 +316,8 @@ class MainWindow:
                     if i[:2] == "dt":
                         if self.current_config["TDC"]:
                             self.shifted_values += 1
-                            self.current_config["TDC"]["file"].write(i[2:] + "\n")
+                            if self.current_config["TDC"]["file"]:
+                                self.current_config["TDC"]["file"].write(i[2:] + "\n")
                     # log - shift registers
                     if i[:2] == "ls":
                         if self.current_config["SHIFT"]:
@@ -387,7 +401,7 @@ class MainWindow:
             "end_date",
         ] = time.strftime("%Y-%m-%d")
 
-        self.compute_shift_transient()
+        self.compute_shift_transient(self.current_config["SHIFT"]["run"])
         self.update_log()
 
         self.current_config["SHIFT"] = None
@@ -532,6 +546,23 @@ class MainWindow:
             self.devices["ps"].write(f"OUTP OFF")
         self.ps_toggle_lock = False
 
+    def latchup(self):
+        self.ps_threaded_toggle(False, 0.05)
+        self.ps_a_latchup_counter = 0
+        self.ps_b_latchup_counter = 0
+        if self.current_config["SHIFT"]:
+            self.hard_stop_shift_test()
+        self.ps_threaded_toggle(True, 0.05)
+        # popup non blocking with button
+        sg.popup_no_buttons(
+            "",
+            image=LAYOUT_SIDE_EYE,
+            title="Warning",
+            non_blocking=True,
+            font=FONT,
+        )
+        time.sleep(2)
+
     def ps_threaded_loop(self):
         while self.close_flag is False:
             try:
@@ -569,21 +600,11 @@ class MainWindow:
                         self.ps_b_latchup_counter = 0
 
                     if self.ps_a_latchup_counter > PS_LATCH_CYCLES:
-                        self.ps_threaded_toggle(False, 0.05)
-                        self.ps_a_latchup_counter = 0
-                        self.ps_b_latchup_counter = 0
-                        if self.current_config["SHIFT"]:
-                            self.hard_stop_shift_test()
-                        time.sleep(2)
+                        self.latchup()
+
                         self.ps_threaded_toggle(True, 0.05)
                     if self.ps_b_latchup_counter > PS_LATCH_CYCLES:
-                        self.ps_threaded_toggle(False, 0.05)
-                        self.ps_a_latchup_counter = 0
-                        self.ps_b_latchup_counter = 0
-                        if self.current_config["SHIFT"]:
-                            self.hard_stop_shift_test()
-                        time.sleep(2)
-                        self.ps_threaded_toggle(True, 0.05)
+                        self.latchup()
 
             except Exception as e:
                 print(e)

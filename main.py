@@ -11,7 +11,7 @@ rtc = RTC()
 print("INIT")
 
 SHIFT_REGISTER_SIZE = 16384
-TDC_SHIFT_REGISTER_SIZE = 40
+TDC_SHIFT_REGISTER_SIZE = 32
 
 shift_out = False
 shift_in = [0]
@@ -120,10 +120,10 @@ def shift(v, delay=1):
     led_pin.value(1)
     clock_pin.value(0)
     data_in_pin.value(v)
+    o = [p.value() for p in data_out_pins]
     time.sleep_us(delay)
     clock_pin.value(1)
     led_pin.value(0)
-    o = [p.value() for p in data_out_pins]
     return o
 
 
