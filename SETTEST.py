@@ -49,48 +49,25 @@ HFS1_pin.value(1)
 a.value(0)
 a.value(1)
 a.value(0)
-a.value(0)
-a.value(1)
-a.value(0)
-a.value(0)
-a.value(1)
-a.value(0)
-a.value(0)
-a.value(1)
-a.value(0)
-a.value(0)
-a.value(1)
-a.value(0)
-a.value(0)
-a.value(1)
-a.value(0)
-a.value(0)
-a.value(1)
-a.value(0)
-a.value(0)
-a.value(1)
-a.value(0)
-a.value(0)
-a.value(1)
-a.value(0)
 
 
 # Test
 HFPULSEIN_pin.value(0)
-time.sleep_ms(1)
+
 HFPULSEIN_pin.value(1)
-time.sleep_ms(1)
+
 andout = AND_FLAG_pin.value()
+
 SET_CLK_input_pin.value(1)
-time.sleep_ms(1)
+
 PISO_SEL_pin.value(1)
-time.sleep_ms(4)
+
 out = [0 for _ in range(len(outs))]
 for i in range(32):
     SET_CLK_input_pin.value(0)
-    time.sleep_ms(1)
+
     SET_CLK_input_pin.value(1)
-    time.sleep_ms(1)
+
     for j in range(len(outs)):
         if outs[j].value() == 1:
             out[j] += 1

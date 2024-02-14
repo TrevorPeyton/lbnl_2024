@@ -3,6 +3,7 @@ from machine import Pin
 import sys
 import uselect
 from machine import RTC
+import machine
 
 spoll = uselect.poll()
 spoll.register(sys.stdin, uselect.POLLIN)
@@ -51,7 +52,7 @@ tdc_clk.value(0)
 tdc_piso_sel.value(0)
 tdc_res_sel0.value(1)
 tdc_res_sel1.value(1)
-tdc_in_swt.value(1)
+tdc_in_swt.value(0)
 tdc_hf_sel0.value(1)
 tdc_hf_sel1.value(1)
 tdc_target_test.value(0)
@@ -102,9 +103,11 @@ def set_hf(sel0, sel1):
 def set_tdc_in(sel):
     tdc_in_swt.value(sel)
     log(f"TDC Input Set to {sel}", "lt")
+    time.sleep(1)
 
 
 def hf_pulse(delay=100):
+    reset_tdc()
     tdc_pulse_gen.value(0)
     time.sleep_us(delay)
     tdc_pulse_gen.value(1)
@@ -230,6 +233,7 @@ while True:
             tdc_test = True
             log("TDC Enabled", "lt")
             reset_tdc()
+            time.sleep(1)
         else:
             tdc_test = False
             log("TDC Disabled", "lt")
@@ -245,14 +249,14 @@ while True:
         if len(v) == 2:
             if v[1] == "X":
                 set_tdc_in(0)
-                time.sleep_us(10)
+                time.sleep(1)
                 # test targets
                 tdc_target_test.value(0)
+                time.sleep_ms(1)
                 tdc_target_test.value(1)
+                time.sleep_ms(1)
                 tdc_target_test.value(0)
-                tdc_target_test.value(1)
-                tdc_target_test.value(0)
-                tdc_target_test.value(1)
+                time.sleep_ms(1)
                 log("Testing Targets", "lt")
             else:
                 set_tdc_in(int(v[1]))

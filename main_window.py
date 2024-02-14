@@ -307,7 +307,13 @@ class MainWindow:
                     if i[:2] == "ds":
                         if self.current_config["SHIFT"]:
                             self.shifted_values += 1
-                            self.current_config["SHIFT"]["file"].write(i[2:] + "\n")
+                            try:
+                                self.current_config["SHIFT"]["file"].write(i[2:] + "\n")
+                            except Exception as e:
+                                print(e)
+                                import traceback
+
+                                print(traceback.format_exc())
                             # update progress bar
                             # self.main_window["-PROG-"].update(
                             #     (self.shifted_values / SHIFT_REGISTER_SIZE) * 100
@@ -315,9 +321,14 @@ class MainWindow:
                     # data - tdc
                     if i[:2] == "dt":
                         if self.current_config["TDC"]:
-                            self.shifted_values += 1
-                            if self.current_config["TDC"]["file"]:
+                            try:
+                                self.shifted_values += 1
                                 self.current_config["TDC"]["file"].write(i[2:] + "\n")
+                            except Exception as e:
+                                print(e)
+                                import traceback
+
+                                print(traceback.format_exc())
                     # log - shift registers
                     if i[:2] == "ls":
                         if self.current_config["SHIFT"]:
@@ -539,11 +550,12 @@ class MainWindow:
             self.devices["ps"].write(f"OUTP ON")
         else:
             self.devices["ps"].write(f"INST {PS_CH1}")
-            self.devices["ps"].write(f"VOLT 0")
+            # self.devices["ps"].write(f"VOLT 0")
             self.devices["ps"].write(f"OUTP OFF")
             self.devices["ps"].write(f"INST {PS_CH2}")
-            self.devices["ps"].write(f"VOLT 0")
+            # self.devices["ps"].write(f"VOLT 0")
             self.devices["ps"].write(f"OUTP OFF")
+        time.sleep(0.5)
         self.ps_toggle_lock = False
 
     def latchup(self):
