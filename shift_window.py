@@ -38,25 +38,29 @@ class ShiftWindow:
                         for n in range(6)
                     ],
                 ],
-                [sg.Canvas(key="-CANVAS-")],
+                [sg.Canvas(key="-CANVAS-", expand_x=True, expand_y=True)],
                 [
                     sg.Multiline(
-                        size=(100, 10),
                         key="-LOG-",
                         disabled=True,
                         font=FONT,
                         expand_x=True,
+                        expand_y=True,
                     )
                 ],
                 [sg.Button("Exit", font=FONT)],
             ]
         ]
         self.window: sg.Window = sg.Window(
-            "Shift Test Results", self.layout, finalize=True
+            "Shift Test Results", self.layout, finalize=True, size=(1000, 800)
         )
-        self.draw_figure(
-            self.window["-CANVAS-"].TKCanvas, self.plot_shift_register(self.run, -1)
-        )
+
+        try:
+            self.draw_figure(
+                self.window["-CANVAS-"].TKCanvas, self.plot_shift_register(self.run, -1)
+            )
+        except Exception as e:
+            print(e)
 
         # fill in the log
         with open(f"data/runs/{self.run}/log.txt", "r") as f:
@@ -77,21 +81,27 @@ class ShiftWindow:
         # -1 is all
         with open(f"data/runs/{run}/shift.txt", "r") as f:
             data = np.stack([np.fromiter(line.strip(), dtype=np.int64) for line in f])
+        if data.shape[0] <= SHIFT_REGISTER_SIZE:
+            data = np.pad(data, ((0, SHIFT_REGISTER_SIZE - data.shape[0]), (0, 0)))
+        elif data.shape[0] > SHIFT_REGISTER_SIZE:
+            data = data[:SHIFT_REGISTER_SIZE]
         data = data.T.reshape(6, -1, 128)
+        fig, ax = plt.subplots(6, 1, figsize=(5, 2))
         if shift_register == -1:
-            fig, ax = plt.subplots(6, 1, figsize=(20, 5))
             for p in range(6):
-                ax[p].set_title(f"Shift Register {p}")
                 ax[p].imshow(
                     data[p], aspect="auto", vmin=0, vmax=1, interpolation="none"
                 )
+                ax[p].set_yticks([])
                 ax[p].set_xticks([])
+                ax[p].set_ylabel(
+                    f"SR{p}", rotation=0, position=(1.01, 0.5), ha="right", va="center"
+                )
 
             fig.tight_layout()
             return fig
         else:
             data = data[shift_register]
-            fig, ax = plt.subplots(1, 1, figsize=(20, 5))
             ax.set_title(f"Shift Register {shift_register}")
             ax.imshow(data, aspect="auto", vmin=0, vmax=1)
             ax.set_xticks([])
@@ -110,17 +120,23 @@ class ShiftWindow:
             if event == sg.WIN_CLOSED or event == "Exit":
                 return True
 
-            if event.startswith("-REG-"):
-                if event.endswith("-all-"):
-                    self.draw_figure(
-                        self.window["-CANVAS-"].TKCanvas,
-                        self.plot_shift_register(self.run, -1),
-                    )
-                else:
-                    self.draw_figure(
-                        self.window["-CANVAS-"].TKCanvas,
-                        self.plot_shift_register(self.run, int(event.split("-")[-1])),
-                    )
+            try:
+                if event.startswith("-REG-"):
+                    if event.endswith("-all-"):
+                        self.draw_figure(
+                            self.window["-CANVAS-"].TKCanvas,
+                            self.plot_shift_register(self.run, -1),
+                        )
+                    else:
+                        self.draw_figure(
+                            self.window["-CANVAS-"].TKCanvas,
+                            self.plot_shift_register(
+                                self.run, int(event.split("-")[-1])
+                            ),
+                        )
+            except Exception as e:
+                print(e)
+
         return False
 
     def close(self):

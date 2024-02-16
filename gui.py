@@ -36,6 +36,8 @@ class App:
         ]
 
     def connect_to_pico(self):
+        if DEBUG:
+            return None
         pico = None
         path = None
         while True:
@@ -54,6 +56,8 @@ class App:
         return pico
 
     def connect_to_ps(self):
+        if DEBUG:
+            return None
         while True:
             try:
                 ps = rm.open_resource("TCPIP0::192.168.4.3::INSTR")
@@ -95,10 +99,10 @@ class App:
         self.create_window(TDCWindow, row, self.run_log)
 
     def close_devices(self):
+        if DEBUG:
+            return
         if self.devices["pico"]:
             self.devices["pico"].close()
-        # if self.devices["ps"]:
-        #     self.devices["ps"].close()
 
 
 if __name__ == "__main__":

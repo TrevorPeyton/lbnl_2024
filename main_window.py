@@ -33,6 +33,7 @@ class MainWindow:
         self.ps_a_latchup_counter = 0
         self.ps_a_latchup_counter = 0
         self.selected_rows = []
+        self.last_values = {}
         self.current_config = {
             "TDC": None,
             "SHIFT": None,
@@ -46,119 +47,13 @@ class MainWindow:
             [LAYOUT_PS_CONFIG],
             [LAYOUT_TEST_CONFIG],
             [LAYOUT_SHIFT_CONFIG],
-            [
-                sg.Frame(
-                    "HFPG/TDC",
-                    layout=[
-                        [
-                            sg.Text(
-                                "High Frequency Pulse selector",
-                                font=FONT,
-                            ),
-                            sg.Combo(
-                                values=("00", "01", "10", "11"),
-                                default_value="11",
-                                k="-HFPS-",
-                                enable_events=True,
-                                font=FONT,
-                            ),
-                            sg.Text(
-                                "High Frequency Pulse Generator",
-                                font=FONT,
-                            ),
-                            sg.Button(
-                                "Generate",
-                                key="-TDC_PULSE-",
-                                button_color=("Black", "White"),
-                                font=FONT,
-                            ),
-                        ],
-                        [
-                            sg.Text("TDC Input Selector", font=FONT),
-                            sg.Combo(
-                                values=("Targets", "Targets Test", "HFPG"),
-                                default_value="Targets",
-                                k="-TDC_IS-",
-                                enable_events=True,
-                                font=FONT,
-                            ),
-                            sg.Text(
-                                "TDC Resolution Selector",
-                                font=FONT,
-                            ),
-                            sg.Combo(
-                                values=("00", "01", "10", "11"),
-                                default_value="11",
-                                k="-HFRS-",
-                                enable_events=True,
-                                font=FONT,
-                            ),
-                            sg.Text(
-                                "TDC",
-                                font=FONT,
-                            ),
-                            sg.Button(
-                                "Start",
-                                key="-TDC-",
-                                button_color=("Black", "White"),
-                                font=FONT,
-                            ),
-                        ],
-                    ],
-                ),
-            ],
-            [
-                sg.Frame(
-                    "Flux Modifications",
-                    font=FONT,
-                    expand_x=True,
-                    layout=[
-                        [
-                            sg.Text("Flux", font=FONT),
-                            sg.Input("0", k="-FLUX-", font=FONT),
-                            sg.Button("Set", font=FONT, key="-SET_FLUX-"),
-                        ],
-                    ],
-                )
-            ],
-            [
-                sg.Frame(
-                    "Run Log",
-                    font=FONT,
-                    expand_x=True,
-                    expand_y=True,
-                    layout=[
-                        [
-                            sg.Table(
-                                self.run_log.values.tolist(),
-                                headings=LOG_COLUMNS,
-                                auto_size_columns=True,
-                                justification="center",
-                                num_rows=10,
-                                key="-self.run_log-",
-                                font=FONT,
-                                expand_x=True,
-                                enable_events=True,
-                                # enable multiple selection
-                                select_mode=sg.TABLE_SELECT_MODE_EXTENDED,
-                            ),
-                        ]
-                    ],
-                ),
-            ],
-            [
-                sg.Button(
-                    "Exit",
-                    font=FONT,
-                ),
-                sg.Button(
-                    "Open",
-                    font=FONT,
-                    key="-OPEN-",
-                ),
-            ],
+            [LAYOUT_HFPG_TDC_CONFIG],
+            [LAYOUT_TABLE_MODIFICATIONS],
+            [LAYOUT_RUN_TABLE_CONFIG],
+            LAYOUT_BOTTOM_CONTROLS,
         ]
         self.main_window = sg.Window("LBNL 2024", self.layout, finalize=True)
+        self.update_log(False)
 
         # start ps thread
         self.ps_thread = threading.Thread(target=self.ps_threaded_loop)
@@ -194,23 +89,25 @@ class MainWindow:
         )
         self.run_log.to_csv("data/runlogs/latest.csv", index=False)
 
-    def update_log(self):
-        self.main_window["-self.run_log-"].update(self.run_log.values.tolist())
-        self.save_log()
+    def update_log(self, save=True):
+        self.main_window["-RUN_LOG-"].update(self.run_log.values.tolist())
+        if save:
+            self.save_log()
 
     def compute_shift_transient(self, run):
-        # read file into numpy array
         with open(f"data/runs/{run}/shift.txt", "r") as f:
-            data = np.stack([np.fromiter(line.strip(), dtype=np.int64) for line in f])
-        data[data == 0] = -1
-        kernel = np.array(self.current_config["SHIFT"]["shift_vals"])
-        kernel[kernel == 0] = -1
-        kernel = kernel.reshape(-1, 1)
-        result = sp.signal.convolve2d(data, kernel, mode="valid")
-        transients = sum(
-            np.repeat([SHIFT_REGISTER_SIZE], 6) - np.sum(result != 0, axis=0)
+            data = np.stack([np.fromiter(line.strip(), dtype=np.int64) for line in f]).T
+        shift_data = self.current_config["SHIFT"]["shift_vals"]
+        mask = np.array(shift_data * (data.shape[1] // len(shift_data)))[None].repeat(
+            6, axis=0
         )
-        self.run_log.loc[self.run_log["run"] == run, "transients"] = transients
+        # ignore last bit if it's not a full shift
+        if mask.shape[1] < data.shape[1]:
+            masked_data = np.logical_xor(data[:, :-1], mask)
+        else:
+            masked_data = np.logical_xor(data, mask)
+        masked_data = np.logical_xor(data, mask)
+        self.run_log.loc[self.run_log["run"] == run, "transients"] = masked_data.sum()
         self.update_log()
 
     def compute_tdc_transient(self, run):
@@ -223,19 +120,14 @@ class MainWindow:
         self.update_log()
 
     def pico_write(self, msg, flush=True):
+        if DEBUG:
+            return
         self.devices["pico"].write((msg + "\n").encode())
         if flush:
             self.devices["pico"].flush()
 
     def create_log(
-        self,
-        part,
-        ion,
-        let,
-        angle,
-        test_type,
-        time,
-        date,
+        self, part, ion, let, angle, test_type, time, date, test_error=False
     ):
         # get the latest run number from run_log
         run = self.run_log["run"].max() + 1
@@ -256,43 +148,14 @@ class MainWindow:
             None,
             None,
             None,
+            test_error,
         ]
         self.create_path(f"data/runs/{run}")
         return {"run": run}
 
-    def stop_tdc(self):
-        self.tdc_enabled = False
-        self.main_window["-TDC-"].update(disabled=True)
-        self.pico_write("t0")
-
-    def start_tdc(self, values):
-        self.tdc_running = True
-        self.tdc_enabled = True
-        self.main_window["-TDC-"].update("Stop")
-        self.pico_write("t1")
-        self.current_config["TDC"] = self.create_log(
-            part=values["-PART-"],
-            ion=values["-ION-"],
-            let=values["-LET-"],
-            angle=values["-ANGLE-"],
-            test_type=f"set",
-            time=time.strftime("%H-%M-%S"),
-            date=time.strftime("%Y-%m-%d"),
-        )
-        self.current_config["TDC"]["file"] = None
-        self.current_config["TDC"]["log_file"] = self.create_log_file(
-            self.current_config["TDC"]["run"]
-        )
-        self.current_config["TDC"]["transients"] = 0
-        self.update_log()
-        # get -TDC_IS- value and send to pico
-        if values["-TDC_IS-"] == "Targets Test":
-            self.pico_write("mX")
-            self.stop_tdc()
-        else:
-            self.pico_write(f"m{0 if values['-TDC_IS-'] == 'Targets' else 1}")
-
     def pico_listen(self):
+        if DEBUG:
+            return
         if self.devices["pico"].in_waiting > 0:
             j = (
                 self.devices["pico"]
@@ -382,17 +245,59 @@ class MainWindow:
                         if self.current_config["TDC"]["file"]:
                             self.current_config["TDC"]["file"].close()
                         self.current_config["TDC"]["log_file"].close()
+                        row = self.run_log["run"] == self.current_config["TDC"]["run"]
                         self.run_log.loc[
-                            self.run_log["run"] == self.current_config["TDC"]["run"],
+                            row,
                             "end_time",
                         ] = time.strftime("%H-%M-%S")
                         self.run_log.loc[
-                            self.run_log["run"] == self.current_config["TDC"]["run"],
+                            row,
                             "end_date",
                         ] = time.strftime("%Y-%m-%d")
                         self.compute_tdc_transient(self.current_config["TDC"]["run"])
                         self.update_log()
+
+                        if self.last_values["-AUTO_OPEN-"]:
+                            row_int = self.run_log[row].index[0]
+                            # convert row (index) to int it is a boolean index
+                            self.open_window(row_int)
                         self.current_config["TDC"] = None
+
+    def stop_tdc(self):
+        self.tdc_enabled = False
+        self.main_window["-TDC-"].update(disabled=True)
+        self.pico_write("t0")
+
+    def start_tdc(self, values):
+        self.tdc_running = True
+        self.tdc_enabled = True
+        self.main_window["-TDC-"].update("Stop")
+        self.pico_write("t1")
+        test_name = (
+            f"set-{values['-HFRS-']}-{TDC_INPUT_MODES.index(values['-TDC_IS-'])}"
+        )
+        self.current_config["TDC"] = self.create_log(
+            part=values["-PART-"],
+            ion=values["-ION-"],
+            let=values["-LET-"],
+            angle=values["-ANGLE-"],
+            test_type=test_name,
+            time=time.strftime("%H-%M-%S"),
+            date=time.strftime("%Y-%m-%d"),
+            test_error=False if values["-TDC_IS-"] == "Targets" else True,
+        )
+        self.current_config["TDC"]["file"] = None
+        self.current_config["TDC"]["log_file"] = self.create_log_file(
+            self.current_config["TDC"]["run"]
+        )
+        self.current_config["TDC"]["transients"] = 0
+        self.update_log()
+        # get -TDC_IS- value and send to pico
+        if values["-TDC_IS-"] == "Targets Test":
+            self.pico_write("mX")
+            self.stop_tdc()
+        else:
+            self.pico_write(f"m{0 if values['-TDC_IS-'] == 'Targets' else 1}")
 
     def finalize_shift_test(self):
         self.shift_loaded = False
@@ -402,13 +307,16 @@ class MainWindow:
         self.current_config["SHIFT"]["file"].close()
         self.current_config["SHIFT"]["log_file"].close()
 
+        # get row as int
+        row = self.run_log["run"] == self.current_config["SHIFT"]["run"]
+
         # update log with end time and date
         self.run_log.loc[
-            self.run_log["run"] == self.current_config["SHIFT"]["run"],
+            row,
             "end_time",
         ] = time.strftime("%H-%M-%S")
         self.run_log.loc[
-            self.run_log["run"] == self.current_config["SHIFT"]["run"],
+            row,
             "end_date",
         ] = time.strftime("%Y-%m-%d")
 
@@ -416,6 +324,11 @@ class MainWindow:
         self.update_log()
 
         self.current_config["SHIFT"] = None
+
+        if self.last_values["-AUTO_OPEN-"]:
+            row_int = self.run_log[row].index[0]
+            # convert row (index) to int it is a boolean index
+            self.open_window(row_int)
 
         # enable shift out button
         self.main_window["-SHIFT-"].update("Start")
@@ -449,6 +362,7 @@ class MainWindow:
             test_type=f"seu-{self.shift_type}-{values['-SHIFT_VAL-']}",
             time=time.strftime("%H-%M-%S"),
             date=time.strftime("%Y-%m-%d"),
+            test_error=False,
         )
         self.current_config["SHIFT"]["file"] = self.create_shift_file(
             self.current_config["SHIFT"]["run"]
@@ -468,8 +382,16 @@ class MainWindow:
             self.shift_constant = True
             self.pico_write(f"sc{values['-SHIFT_VAL-']}")
 
+    def open_window(self, row):
+        test_type = self.run_log.iloc[row]["test_type"]
+        if test_type.startswith("seu"):
+            self.shift_window_generator(row)
+        else:
+            self.tdc_window_generator(row)
+
     def window_event_listen(self):
         event, values = self.main_window.read(timeout=1)
+        self.last_values = values
         # exit event
         if event == sg.WIN_CLOSED or event == "Exit":
             return True
@@ -493,16 +415,20 @@ class MainWindow:
         if event == "-TDC_PULSE-":
             if self.tdc_enabled:
                 self.pico_write("p")
-        if event == "-self.run_log-":
-            self.selected_rows = values["-self.run_log-"]
+        if event == "-RUN_LOG-":
+            self.selected_rows = values["-RUN_LOG-"]
         if event == "-OPEN-":
             for row in self.selected_rows:
-                # get row test type
-                test_type = self.run_log.iloc[row]["test_type"]
-                if test_type.startswith("seu"):
-                    self.shift_window_generator(row)
-                else:
-                    self.tdc_window_generator(row)
+                # rows are inverted so invert row #
+                self.open_window(row)
+        if event == "-SANITY-":
+            sg.popup_no_buttons(
+                "",
+                image=LAYOUT_SIDE_EYE,
+                title="Warning",
+                non_blocking=True,
+                font=FONT,
+            )
         if event == "-SET_FLUX-":
             # make sure values["-FLUX-"] is a valid number
             try:
@@ -518,6 +444,7 @@ class MainWindow:
                     pass
                 else:
                     # update flux on table
+                    # self.run_log.loc[self.selected_rows[0], "flux"] = values["-FLUX-"]
                     self.run_log.loc[self.selected_rows[0], "flux"] = values["-FLUX-"]
                     self.update_log()
         if event == "-TOGGLE_PS-":
@@ -535,12 +462,18 @@ class MainWindow:
             self.main_window["-CH_A-"].update(values["-UPDATE_PS-"]["ch_a"])
             self.main_window["-CH_B-"].update(values["-UPDATE_PS-"]["ch_b"])
 
+        if event == "-TDC_TARGET_PULSE-":
+            print("pulse")
+            self.pico_write("o")
+
         return False
 
     def ps_threaded_toggle(self, on: bool, delay=0.5):
+        if DEBUG:
+            return
+        self.ps_toggle_lock = True
         while self.ps_read_lock:
             continue
-        self.ps_toggle_lock = True
         if on:
             self.devices["ps"].write(f"INST {PS_CH1}")
             self.devices["ps"].write(f"VOLT 3.3")
@@ -555,7 +488,7 @@ class MainWindow:
             self.devices["ps"].write(f"INST {PS_CH2}")
             # self.devices["ps"].write(f"VOLT 0")
             self.devices["ps"].write(f"OUTP OFF")
-        time.sleep(0.5)
+        time.sleep(2)
         self.ps_toggle_lock = False
 
     def latchup(self):
@@ -576,6 +509,8 @@ class MainWindow:
         time.sleep(2)
 
     def ps_threaded_loop(self):
+        if DEBUG:
+            return
         while self.close_flag is False:
             try:
                 # avoid writing/reading to ps which will trigger an error if we are enabling/disabling

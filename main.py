@@ -118,6 +118,16 @@ def hf_pulse(delay=100):
     tdc_piso_sel.value(1)
 
 
+def target_pulse(delay=100):
+    tdc_target_test.value(0)
+    time.sleep_ms(1)
+    tdc_target_test.value(1)
+    time.sleep_ms(1)
+    tdc_target_test.value(0)
+    time.sleep_ms(1)
+    log("Targets Pulsed", "lt")
+
+
 def shift(v, delay=1):
     global data_out_pins
     led_pin.value(1)
@@ -275,6 +285,8 @@ while True:
             )
     if v[0] == "p":
         hf_pulse()
+    if v[0] == "o":
+        target_pulse()
     if v[0] == "d":
         log("", m="d")
     if v[0] == "s":
