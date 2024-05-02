@@ -56,8 +56,8 @@ class MainWindow:
         self.update_log(False)
 
         # start ps thread
-        self.ps_thread = threading.Thread(target=self.ps_threaded_loop)
-        self.ps_thread.start()
+        # self.ps_thread = threading.Thread(target=self.ps_threaded_loop)
+        # self.ps_thread.start()
 
     def create_path(self, path):
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
@@ -447,20 +447,20 @@ class MainWindow:
                     # self.run_log.loc[self.selected_rows[0], "flux"] = values["-FLUX-"]
                     self.run_log.loc[self.selected_rows[0], "flux"] = values["-FLUX-"]
                     self.update_log()
-        if event == "-TOGGLE_PS-":
-            if not self.ps_toggle_lock:
-                self.ps_status = not self.ps_status
-                if self.ps_status:
-                    self.main_window["-TOGGLE_PS-"].update(image_data=LAYOUT_BTN_ON)
-                else:
-                    self.main_window["-TOGGLE_PS-"].update(image_data=LAYOUT_BTN_OFF)
-                # create temp thread to toggle ps
-                threading.Thread(
-                    target=self.ps_threaded_toggle, args=(self.ps_status,)
-                ).start()
-        if event == "-UPDATE_PS-":
-            self.main_window["-CH_A-"].update(values["-UPDATE_PS-"]["ch_a"])
-            self.main_window["-CH_B-"].update(values["-UPDATE_PS-"]["ch_b"])
+        # if event == "-TOGGLE_PS-":
+        #     if not self.ps_toggle_lock:
+        #         self.ps_status = not self.ps_status
+        #         if self.ps_status:
+        #             self.main_window["-TOGGLE_PS-"].update(image_data=LAYOUT_BTN_ON)
+        #         else:
+        #             self.main_window["-TOGGLE_PS-"].update(image_data=LAYOUT_BTN_OFF)
+        #         # create temp thread to toggle ps
+        #         threading.Thread(
+        #             target=self.ps_threaded_toggle, args=(self.ps_status,)
+        #         ).start()
+        # if event == "-UPDATE_PS-":
+        #     self.main_window["-CH_A-"].update(values["-UPDATE_PS-"]["ch_a"])
+        #     self.main_window["-CH_B-"].update(values["-UPDATE_PS-"]["ch_b"])
 
         if event == "-TDC_TARGET_PULSE-":
             print("pulse")
@@ -468,101 +468,101 @@ class MainWindow:
 
         return False
 
-    def ps_threaded_toggle(self, on: bool, delay=0.5):
-        if DEBUG:
-            return
-        self.ps_toggle_lock = True
-        while self.ps_read_lock:
-            continue
-        if on:
-            self.devices["ps"].write(f"INST {PS_CH1}")
-            self.devices["ps"].write(f"VOLT 3.3")
-            self.devices["ps"].write(f"OUTP ON")
-            self.devices["ps"].write(f"INST {PS_CH2}")
-            self.devices["ps"].write(f"VOLT 1.2")
-            self.devices["ps"].write(f"OUTP ON")
-        else:
-            self.devices["ps"].write(f"INST {PS_CH1}")
-            # self.devices["ps"].write(f"VOLT 0")
-            self.devices["ps"].write(f"OUTP OFF")
-            self.devices["ps"].write(f"INST {PS_CH2}")
-            # self.devices["ps"].write(f"VOLT 0")
-            self.devices["ps"].write(f"OUTP OFF")
-        time.sleep(2)
-        self.ps_toggle_lock = False
+    # def ps_threaded_toggle(self, on: bool, delay=0.5):
+    #     if DEBUG:
+    #         return
+    #     self.ps_toggle_lock = True
+    #     while self.ps_read_lock:
+    #         continue
+    #     if on:
+    #         self.devices["ps"].write(f"INST {PS_CH1}")
+    #         self.devices["ps"].write(f"VOLT 3.3")
+    #         self.devices["ps"].write(f"OUTP ON")
+    #         self.devices["ps"].write(f"INST {PS_CH2}")
+    #         self.devices["ps"].write(f"VOLT 1.2")
+    #         self.devices["ps"].write(f"OUTP ON")
+    #     else:
+    #         self.devices["ps"].write(f"INST {PS_CH1}")
+    #         # self.devices["ps"].write(f"VOLT 0")
+    #         self.devices["ps"].write(f"OUTP OFF")
+    #         self.devices["ps"].write(f"INST {PS_CH2}")
+    #         # self.devices["ps"].write(f"VOLT 0")
+    #         self.devices["ps"].write(f"OUTP OFF")
+    #     time.sleep(2)
+    #     self.ps_toggle_lock = False
 
-    def latchup(self):
-        self.ps_threaded_toggle(False, 0.05)
-        self.ps_a_latchup_counter = 0
-        self.ps_b_latchup_counter = 0
-        if self.current_config["SHIFT"]:
-            self.hard_stop_shift_test()
-        self.ps_threaded_toggle(True, 0.05)
-        # popup non blocking with button
-        sg.popup_no_buttons(
-            "",
-            image=LAYOUT_SIDE_EYE,
-            title="Warning",
-            non_blocking=True,
-            font=FONT,
-        )
-        time.sleep(2)
+    # def latchup(self):
+    #     self.ps_threaded_toggle(False, 0.05)
+    #     self.ps_a_latchup_counter = 0
+    #     self.ps_b_latchup_counter = 0
+    #     if self.current_config["SHIFT"]:
+    #         self.hard_stop_shift_test()
+    #     self.ps_threaded_toggle(True, 0.05)
+    #     # popup non blocking with button
+    #     sg.popup_no_buttons(
+    #         "",
+    #         image=LAYOUT_SIDE_EYE,
+    #         title="Warning",
+    #         non_blocking=True,
+    #         font=FONT,
+    #     )
+    #     time.sleep(2)
 
-    def ps_threaded_loop(self):
-        if DEBUG:
-            return
-        while self.close_flag is False:
-            try:
-                # avoid writing/reading to ps which will trigger an error if we are enabling/disabling
-                if self.ps_toggle_lock:
-                    continue
-                if self.close_flag or not self.main_window:
-                    break
+    # def ps_threaded_loop(self):
+    #     if DEBUG:
+    #         return
+    #     while self.close_flag is False:
+    #         try:
+    #             # avoid writing/reading to ps which will trigger an error if we are enabling/disabling
+    #             if self.ps_toggle_lock:
+    #                 continue
+    #             if self.close_flag or not self.main_window:
+    #                 break
 
-                self.ps_read_lock = True
-                ch_a = float(self.devices["ps"].query(f"MEAS:CURR? {PS_CH1}"))
-                ch_b = float(self.devices["ps"].query(f"MEAS:CURR? {PS_CH2}"))
-                self.ps_read_lock = False
+    #             self.ps_read_lock = True
+    #             ch_a = float(self.devices["ps"].query(f"MEAS:CURR? {PS_CH1}"))
+    #             ch_b = float(self.devices["ps"].query(f"MEAS:CURR? {PS_CH2}"))
+    #             self.ps_read_lock = False
 
-                if self.main_window is not None:
-                    self.main_window.write_event_value(
-                        "-UPDATE_PS-",
-                        {
-                            "ch_a": f"{ch_a:.3f}A",
-                            "ch_b": f"{ch_b:.3f}A",
-                        },
-                    )
-                if self.ps_file and self.ps_toggle_lock is False:
-                    self.ps_file.write(
-                        # date,time,psa,psb
-                        f"{time.strftime('%Y-%m-%d,%H-%M-%S')},{ch_a},{ch_b}\n"
-                    )
-                    if ch_a > PS_THRESHOLD_A:
-                        self.ps_a_latchup_counter += 1
-                    else:
-                        self.ps_a_latchup_counter = 0
-                    if ch_b > PS_THRESHOLD_B:
-                        self.ps_b_latchup_counter += 1
-                    else:
-                        self.ps_b_latchup_counter = 0
+    #             if self.main_window is not None:
+    #                 self.main_window.write_event_value(
+    #                     "-UPDATE_PS-",
+    #                     {
+    #                         "ch_a": f"{ch_a:.3f}A",
+    #                         "ch_b": f"{ch_b:.3f}A",
+    #                     },
+    #                 )
+    #             if self.ps_file and self.ps_toggle_lock is False:
+    #                 self.ps_file.write(
+    #                     # date,time,psa,psb
+    #                     f"{time.strftime('%Y-%m-%d,%H-%M-%S')},{ch_a},{ch_b}\n"
+    #                 )
+    #                 if ch_a > PS_THRESHOLD_A:
+    #                     self.ps_a_latchup_counter += 1
+    #                 else:
+    #                     self.ps_a_latchup_counter = 0
+    #                 if ch_b > PS_THRESHOLD_B:
+    #                     self.ps_b_latchup_counter += 1
+    #                 else:
+    #                     self.ps_b_latchup_counter = 0
 
-                    if self.ps_a_latchup_counter > PS_LATCH_CYCLES:
-                        self.latchup()
+    #                 if self.ps_a_latchup_counter > PS_LATCH_CYCLES:
+    #                     self.latchup()
 
-                        self.ps_threaded_toggle(True, 0.05)
-                    if self.ps_b_latchup_counter > PS_LATCH_CYCLES:
-                        self.latchup()
+    #                     self.ps_threaded_toggle(True, 0.05)
+    #                 if self.ps_b_latchup_counter > PS_LATCH_CYCLES:
+    #                     self.latchup()
 
-            except Exception as e:
-                print(e)
-                # print full stack
-                import traceback
+    #         except Exception as e:
+    #             print(e)
+    #             # print full stack
+    #             import traceback
 
-                print(traceback.format_exc())
-        if self.ps_file:
-            self.ps_file.close()
-        self.ps_threaded_toggle(False, 0.05)
-        self.devices["ps"].close()
+    #             print(traceback.format_exc())
+    #     if self.ps_file:
+    #         self.ps_file.close()
+    #     self.ps_threaded_toggle(False, 0.05)
+    #     self.devices["ps"].close()
 
     def window_event_loop(self) -> bool:
         self.pico_listen()

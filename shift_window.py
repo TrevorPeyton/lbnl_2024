@@ -98,7 +98,18 @@ class ShiftWindow:
                     f"SR{p}", rotation=0, position=(1.01, 0.5), ha="right", va="center"
                 )
 
-            fig.tight_layout()
+                for i in range(6):
+                    # small font
+                    ax[i].text(
+                        138,
+                        64,
+                        f"{data[i].sum()}",
+                        ha="right",
+                        va="center",
+                        fontsize=6,
+                    )
+
+            # fig.tight_layout()
             return fig
         else:
             data = data[shift_register]

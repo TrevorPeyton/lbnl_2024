@@ -25,24 +25,24 @@ tdc_test = True
 tdc_shift = False
 tdc_counter = 0
 
-led_pin = Pin(25, Pin.OUT)
-clock_pin = Pin(7, Pin.OUT)
-reset_pin = Pin(8, Pin.OUT)  # reset is active low so invert all values
-data_in_pin = Pin(9, Pin.OUT)
+led_pin = Pin(25, Pin.OUT, value=0)
+clock_pin = Pin(7, Pin.OUT, value=0)
+reset_pin = Pin(8, Pin.OUT, value=0)  # reset is active low so invert all values
+data_in_pin = Pin(9, Pin.OUT, value=0)
 data_out_pins = [Pin(i, Pin.IN) for i in range(6)]
 
-tdc_clk = Pin(17, Pin.OUT)  # clock
-tdc_pulse_gen = Pin(11, Pin.OUT)  # high frequency pulse generator
-tdc_and = Pin(12, Pin.IN)  # and flag for transient detected
-tdc_rst = Pin(13, Pin.OUT)  # reset
-tdc_in_swt = Pin(14, Pin.OUT)  # input switch
-tdc_piso_sel = Pin(15, Pin.OUT)  # parallel in/serial out switch
-tdc_hf_sel0 = Pin(27, Pin.OUT)  # high frequency select
-tdc_hf_sel1 = Pin(28, Pin.OUT)  # high frequency select
-tdc_res_sel0 = Pin(22, Pin.OUT)  # select 0 resolution
-tdc_res_sel1 = Pin(26, Pin.OUT)  # select 1 resolution
+tdc_clk = Pin(17, Pin.OUT, value=0)  # clock
+tdc_pulse_gen = Pin(11, Pin.OUT, value=0)  # high frequency pulse generator
+tdc_and = Pin(12, Pin.IN, value=0)  # and flag for transient detected
+tdc_rst = Pin(13, Pin.OUT, value=0)  # reset
+tdc_in_swt = Pin(14, Pin.OUT, value=0)  # input switch
+tdc_piso_sel = Pin(15, Pin.OUT, value=0)  # parallel in/serial out switch
+tdc_hf_sel0 = Pin(27, Pin.OUT, value=0)  # high frequency select
+tdc_hf_sel1 = Pin(28, Pin.OUT, value=0)  # high frequency select
+tdc_res_sel0 = Pin(22, Pin.OUT, value=0)  # select 0 resolution
+tdc_res_sel1 = Pin(26, Pin.OUT, value=0)  # select 1 resolution
 tdc_out_pins = [Pin(i, Pin.IN) for i in [16, 19, 20, 21]]
-tdc_target_test = Pin(10, Pin.OUT)  # target test
+tdc_target_test = Pin(10, Pin.OUT, value=0)  # target test
 
 # tdc setup
 reset_pin.value(1)

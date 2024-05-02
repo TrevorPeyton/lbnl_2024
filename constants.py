@@ -1,4 +1,4 @@
-DEBUG = False
+DEBUG = True
 SHIFT_REGISTER_SIZE = 16384
 TDC_SHIFT_REGISTER_SIZE = 32
 
@@ -33,6 +33,7 @@ PARTS = [
     "4G(1)",
     "2P(1)",
     "2G(5)",
+    "6M(5)",
 ]
 PARTS.sort()
 
@@ -62,7 +63,7 @@ IONS.sort()
 
 
 FONT = ("Arial", 18)
-PS_THRESHOLD_A = 0.08
+PS_THRESHOLD_A = 0.1
 PS_THRESHOLD_B = 0.2
 PS_LATCH_CYCLES = 4
 

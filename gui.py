@@ -23,7 +23,10 @@ sg.theme("Dark")
 
 class App:
     def __init__(self):
-        self.devices = {"pico": self.connect_to_pico(), "ps": self.connect_to_ps()}
+        self.devices = {
+            "pico": self.connect_to_pico(),
+            "ps": None,
+        }  # self.connect_to_ps()}
         self.create_log_paths()
         self.run_log = self.load_log()
         self.windows = [
@@ -55,16 +58,17 @@ class App:
             break
         return pico
 
-    def connect_to_ps(self):
-        if DEBUG:
-            return None
-        while True:
-            try:
-                ps = rm.open_resource("TCPIP0::192.168.4.3::INSTR")
-                return ps
-            except Exception as e:
-                print("Failed to connect to SMU")
-                time.sleep(1)
+    # def connect_to_ps(self):
+    #     if DEBUG:
+    #         return None
+    #     while True:
+    #         try:
+    #             ps = rm.open_resource("TCPIP::192.168.4.5::INSTR")
+    #             # ps = rm.open_resource("TCPIP::192.168.4.3::inst0::INSTR")
+    #             return ps
+    #         except Exception as e:
+    #             print("Failed to connect to PS")
+    #             time.sleep(1)
 
     def create_path(self, path):
         pathlib.Path(path).mkdir(parents=True, exist_ok=True)
