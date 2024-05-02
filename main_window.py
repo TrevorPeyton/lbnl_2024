@@ -52,7 +52,7 @@ class MainWindow:
             [LAYOUT_RUN_TABLE_CONFIG],
             LAYOUT_BOTTOM_CONTROLS,
         ]
-        self.main_window = sg.Window("LBNL 2024", self.layout, finalize=True)
+        self.main_window = sg.Window("LBNL 2024", self.layout, finalize=True, size=(1200,750))
         self.update_log(False)
 
         # start ps thread
@@ -96,7 +96,9 @@ class MainWindow:
 
     def compute_shift_transient(self, run):
         with open(f"data/runs/{run}/shift.txt", "r") as f:
-            data = np.stack([np.fromiter(line.strip(), dtype=np.int64) for line in f]).T
+            lines = f.readlines()
+            lines = [l for l in lines if l != "\n"]
+            data = np.stack([np.fromiter(line.strip(), dtype=np.int64) for line in lines]).T
         shift_data = self.current_config["SHIFT"]["shift_vals"]
         mask = np.array(shift_data * (data.shape[1] // len(shift_data)))[None].repeat(
             6, axis=0
@@ -429,14 +431,14 @@ class MainWindow:
                 non_blocking=True,
                 font=FONT,
             )
-        if event == "-SET_FLUX-":
+        if event == "-SET_FLUENCE-":
             # make sure values["-FLUX-"] is a valid number
             try:
-                float(values["-FLUX-"])
+                float(values["-FLUENCE-"])
             except ValueError:
                 # non blocking popup
                 sg.popup(
-                    "Invalid flux value", title="Error", non_blocking=True, font=FONT
+                    "Invalid fluence value", title="Error", non_blocking=True, font=FONT
                 )
                 return False
             if len(self.selected_rows) > 0:
@@ -445,7 +447,7 @@ class MainWindow:
                 else:
                     # update flux on table
                     # self.run_log.loc[self.selected_rows[0], "flux"] = values["-FLUX-"]
-                    self.run_log.loc[self.selected_rows[0], "flux"] = values["-FLUX-"]
+                    self.run_log.loc[self.selected_rows[0], "fluence"] = values["-FLUENCE-"]
                     self.update_log()
         # if event == "-TOGGLE_PS-":
         #     if not self.ps_toggle_lock:

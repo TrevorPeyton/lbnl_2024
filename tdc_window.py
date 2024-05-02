@@ -119,7 +119,8 @@ class TDCWindow:
                 data_list.append([])
                 with open(f, "r") as file:
                     for line in file:
-                        data_list[-1].append(np.fromiter(line.strip(), dtype=np.int64))
+                        if line != "/n":
+                            data_list[-1].append(np.fromiter(line.strip(), dtype=np.int64))
         return np.stack(data_list) if len(data_list) > 0 else None
 
     def plot_tdc_summary(self):

@@ -25,7 +25,7 @@ class App:
     def __init__(self):
         self.devices = {
             "pico": self.connect_to_pico(),
-            "ps": None,
+            "ps": None,#self.connect_to_ps(),
         }  # self.connect_to_ps()}
         self.create_log_paths()
         self.run_log = self.load_log()
@@ -45,7 +45,8 @@ class App:
         path = None
         while True:
             try:
-                l = glob.glob("/dev/tty.usbmodem*") + glob.glob("/dev/cu.usbmodem*")
+                #l = glob.glob("/dev/tty*")# + glob.glob("/dev/cu.usbmodem*")
+                l = ["COM6"]
                 path = l[0]
                 pico = serial.Serial(path, 115200)
             except:
@@ -63,7 +64,7 @@ class App:
     #         return None
     #     while True:
     #         try:
-    #             ps = rm.open_resource("TCPIP::192.168.4.5::INSTR")
+    #             ps = rm.open_resource("TCPIP::192.168.4.3::INSTR")
     #             # ps = rm.open_resource("TCPIP::192.168.4.3::inst0::INSTR")
     #             return ps
     #         except Exception as e:
@@ -85,7 +86,7 @@ class App:
             run_log = pd.DataFrame(columns=LOG_COLUMNS)
             run_log.to_csv("data/runlogs/latest.csv", index=False)
         # set flux dtype to float64
-        run_log["flux"] = run_log["flux"].astype("float64")
+        run_log["fluence"] = run_log["fluence"].astype("float64")
         return run_log
 
     def create_window(self, window_class, row, *args, **kwargs):

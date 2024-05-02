@@ -1,4 +1,4 @@
-DEBUG = True
+DEBUG = False # True = Testing, False = Running program 
 SHIFT_REGISTER_SIZE = 16384
 TDC_SHIFT_REGISTER_SIZE = 32
 
@@ -15,7 +15,7 @@ LOG_COLUMNS = [
     "end_time",
     "end_date",
     "transients",
-    "flux",
+    "fluence",
     "test/error",
 ]
 PARTS = [

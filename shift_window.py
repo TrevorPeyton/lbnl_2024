@@ -80,7 +80,9 @@ class ShiftWindow:
     def plot_shift_register(self, run, shift_register=-1):
         # -1 is all
         with open(f"data/runs/{run}/shift.txt", "r") as f:
-            data = np.stack([np.fromiter(line.strip(), dtype=np.int64) for line in f])
+            lines = f.readlines()
+            lines = [l for l in lines if l != "\n"]
+            data = np.stack([np.fromiter(line.strip(), dtype=np.int64) for line in lines])
         if data.shape[0] <= SHIFT_REGISTER_SIZE:
             data = np.pad(data, ((0, SHIFT_REGISTER_SIZE - data.shape[0]), (0, 0)))
         elif data.shape[0] > SHIFT_REGISTER_SIZE:
