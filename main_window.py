@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 from constants import *
 from layouts import *
 import time
@@ -49,8 +49,8 @@ class MainWindow:
             [LAYOUT_SHIFT_CONFIG],
             [LAYOUT_HFPG_TDC_CONFIG],
             [LAYOUT_TABLE_MODIFICATIONS],
-            [LAYOUT_RUN_TABLE_CONFIG],
             LAYOUT_BOTTOM_CONTROLS,
+            [LAYOUT_RUN_TABLE_CONFIG],
         ]
         self.main_window = sg.Window("LBNL 2024", self.layout, finalize=True, size=(1200,750))
         self.update_log(False)

@@ -45,6 +45,9 @@ tdc_out_pins = [Pin(i, Pin.IN) for i in [16, 19, 20, 21]]
 tdc_target_test = Pin(10, Pin.OUT)  # target test
 
 # tdc setup
+reset_pin.value(0)
+reset_pin.value(1)
+reset_pin.value(0)
 reset_pin.value(1)
 tdc_rst.value(0)
 tdc_rst.value(1)

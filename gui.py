@@ -1,4 +1,4 @@
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 
 import serial
 import time
@@ -86,7 +86,7 @@ class App:
             run_log = pd.DataFrame(columns=LOG_COLUMNS)
             run_log.to_csv("data/runlogs/latest.csv", index=False)
         # set flux dtype to float64
-        run_log["fluence"] = run_log["fluence"].astype("float64")
+        run_log["flux"] = run_log["flux"].astype("float64")
         return run_log
 
     def create_window(self, window_class, row, *args, **kwargs):
